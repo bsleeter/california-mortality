@@ -59,7 +59,7 @@ head(zonalForest)
 # Change the year in the following line to run for additonal years
 # Script write raster output and a data frame summary to disk
 
-year = 2006
+year = 2016
 # Read in the vector data
 v = readOGR(paste("Shapefiles/ads", year, "_mortality.shp", sep = ""))
 v = spTransform(v, CRS('+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0'))
@@ -96,3 +96,21 @@ writeRaster(med, paste("R Outputs/med", year, "tif", sep = "."), format = "GTiff
 writeRaster(high, paste("R Outputs/high", year, "tif", sep = "."), format = "GTiff", overwrite = TRUE)
 
 save.image()
+
+
+
+
+#---------------------------
+# Merge the dataframes on disk into a single dataframe
+list = list.files(path = "R Outputs", pattern = "*.csv")
+ecoSeverity = lapply(paste("R Outputs/", list, sep = ""), read_csv) %>%
+    bind_rows()
+
+# Plot the results by ecoregion
+ggplot(data = ecoSeverity, aes(x = timestep, y = mortality, fill = severity)) +
+    geom_bar(stat = "identity") +
+    facet_wrap(~zone) +
+    theme_bw()
+
+# Write the combined dataframe to disk
+write.csv(ecoSeverity, "R Outputs/ecoregion-severity.csv", row.names = FALSE)
