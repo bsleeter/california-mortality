@@ -59,7 +59,7 @@ head(zonalForest)
 # Change the year in the following line to run for additonal years
 # Script write raster output and a data frame summary to disk
 
-year = 2016
+year = 2004
 # Read in the vector data
 v = readOGR(paste("Shapefiles/ads", year, "_mortality.shp", sep = ""))
 v = spTransform(v, CRS('+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0'))
