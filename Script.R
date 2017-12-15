@@ -29,7 +29,7 @@ library(rasterVis)
 # Read in a raster of land cover
 lulc = raster("Rasters/stateClass.tif")
 levelplot(lulc)
-forest = reclassify(lulc, c(-Inf, 5.4, NA, 5.5, 6.5, 6, 6.6, Inf, NA))
+forest = reclassify(lulc, c(-Inf, 5.4, NA, 5.5, 6.5, 1, 6.6, Inf, NA))
 forestArea = cellStats(forest, sum)
 levelplot(forest)
 
@@ -48,7 +48,8 @@ levelplot(ecoregions)
 
 # Calculate forest area by ecoregion
 zonalForest = data.frame(zonal(forest, ecoregions, sum)) %>%
-    rename(forest = value)
+    rename(forest = value) %>%
+    mutate(km2 = forest * 0.0729)
 head(zonalForest)
 
 
@@ -59,7 +60,7 @@ head(zonalForest)
 # Change the year in the following line to run for additonal years
 # Script write raster output and a data frame summary to disk
 
-year = 2004
+year = 2002
 # Read in the vector data
 v = readOGR(paste("Shapefiles/ads", year, "_mortality.shp", sep = ""))
 v = spTransform(v, CRS('+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0'))
@@ -69,9 +70,11 @@ r = raster(extent(lulc), res = res(lulc), crs = crs(lulc))
 r = rasterize(v, r, "TPA1", update = TRUE, updateValue = "NA")
 
 # Create low, medium, and high severity class rasters
-low = reclassify(r, c(0, 10, 1, 10, Inf, 0))
-med = reclassify(r, c(0, 10, 0, 10, 20, 1, 20, Inf, 0))
-high = reclassify(r, c(0, 20.0, 0, 20, Inf, 1))
+low = reclassify(r, c(-Inf, 10, 1, 10, Inf, NA))
+med = reclassify(r, c(-Inf, 10, NA, 10, 20, 1, 20, Inf, NA))
+high = reclassify(r, c(-Inf, 20.0, NA, 20.1, Inf, 1))
+
+levelplot(high, maxpixels = 2e5)
 
 # Calculate zonal statistics data frame
 zonalLow = data.frame(zonal(low, ecoregions, sum)) %>%
@@ -87,7 +90,7 @@ zonalHigh = data.frame(zonal(high, ecoregions, sum)) %>%
     left_join(zonalForest, by = "zone")
 
 zonal = rbind(zonalLow, zonalMed, zonalHigh) %>%
-    mutate(mortality = value / forest)
+    mutate(mortality = (value*0.0729) / km2)
 head(zonal)
 
 write.csv(zonal, paste("R Outputs/zonal", year, ".csv", sep = ""), row.names = F)
@@ -95,16 +98,24 @@ writeRaster(low, paste("R Outputs/low", year, "tif", sep = "."), format = "GTiff
 writeRaster(med, paste("R Outputs/med", year, "tif", sep = "."), format = "GTiff", overwrite = TRUE)
 writeRaster(high, paste("R Outputs/high", year, "tif", sep = "."), format = "GTiff", overwrite = TRUE)
 
+
+
 save.image()
 
 
 
 
 #---------------------------
+# Read in an ecoregion id/name lookup
+ecoLookup = read.csv("ecoregion_lookup.csv", header = T)
+
 # Merge the dataframes on disk into a single dataframe
 list = list.files(path = "R Outputs", pattern = "*.csv")
 ecoSeverity = lapply(paste("R Outputs/", list, sep = ""), read_csv) %>%
-    bind_rows()
+    bind_rows() %>%
+    left_join(ecoLookup)
+head(ecoSeverity)
+
 
 # Plot the results by ecoregion
 ggplot(data = ecoSeverity, aes(x = timestep, y = mortality, fill = severity)) +
@@ -114,3 +125,8 @@ ggplot(data = ecoSeverity, aes(x = timestep, y = mortality, fill = severity)) +
 
 # Write the combined dataframe to disk
 write.csv(ecoSeverity, "R Outputs/ecoregion-severity.csv", row.names = FALSE)
+
+distributions = data.frame(StratumID = ecoSeverity$ecoregion,
+                           SecondaryStratumID = "",
+                           DistributionTypeID = "",
+                           E)
