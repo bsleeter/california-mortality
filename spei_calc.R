@@ -97,11 +97,15 @@ setwd('/Volumes/DGE/Data/Shared/Labs/Field/Private/Marvin/TNC/Statewide/californ
 		spei_d_ts = rts(spei_d,as.Date(monthly_time_series))
 		
 		# spei over specified time window
-		spei_36mo = calc(spei_d_ts@raster, function(x) spei(x,36,na.rm=TRUE)$fitted)
+		spei_36mo = calc(spei_d, function(x) spei(x,36,na.rm=TRUE)$fitted)
+		spei_60mo = calc(spei_d, function(x) spei(x,60,na.rm=TRUE)$fitted)
 	
 		names(spei_36mo) = paste(monthly_time_series)
+		names(spei_60mo) = paste(monthly_time_series)
 		
 		writeRaster(spei_36mo, filename = "Climate/LOCA/hadgem-85-loca-future_monthly_spei_36mo.tif",
+				format="GTiff",datatype='FLT4S',	options=c("COMPRESS=LZW"),overwrite=TRUE)
+		writeRaster(spei_60mo, filename = "Climate/LOCA/hadgem-85-loca-future_monthly_spei_60mo.tif",
 				format="GTiff",datatype='FLT4S',	options=c("COMPRESS=LZW"),overwrite=TRUE)
 
 
@@ -112,7 +116,17 @@ setwd('/Volumes/DGE/Data/Shared/Labs/Field/Private/Marvin/TNC/Statewide/californ
 	# PRISM data from earth engine script
 		prism_ppt = stack("Climate/PRISM/prism_CA_4km_1990-2017_monthly_ppt_mm.tif")
 		prism_tmean_K = stack("Climate/PRISM/prism_CA_4km_1990-2017_monthly_tmean_K.tif")
-	
+		
+		# add missing months
+		prism_ppt_2016_11_12 = stack('Climate/PRISM/PRISM_ppt_stable_4kmM3_201611_bil/PRISM_ppt_stable_4kmM3_201611_CA.tif',
+										'Climate/PRISM/PRISM_ppt_stable_4kmM3_201612_bil/PRISM_ppt_stable_4kmM3_201612_CA.tif')
+		prism_tmean_2016_11_12 = stack('Climate/PRISM/PRISM_tmean_stable_4kmM2_201611_bil/PRISM_tmean_stable_4kmM2_201611_CA.tif',
+										'Climate/PRISM/PRISM_tmean_stable_4kmM2_201612_bil/PRISM_tmean_stable_4kmM2_201612_CA.tif')
+										
+		prism_ppt = stack(subset(prism_ppt,c(1:322)), prism_ppt_2016_11_12, subset(prism_ppt,c(323:333)))
+		prism_tmean_K = stack(subset(prism_tmean_K,c(1:322)), prism_tmean_2016_11_12, subset(prism_tmean_K,c(323:333)))
+		
+		
 	# convert tmean from deg K to deg C
 		prism_tmean = prism_tmean_K - 273 # raster is integer
 	
@@ -122,7 +136,7 @@ setwd('/Volumes/DGE/Data/Shared/Labs/Field/Private/Marvin/TNC/Statewide/californ
 		yrs = rep(c(1990:2017),each=12)
 		mon = rep(1:12,length(c(1990:2017)))
 		mon = sprintf("%02d",mon)	
-		date_list = paste0(yrs,mon)[-c(323,324,336)] # 3 missing months (11/2016, 12/2016, 12/2017)
+		date_list = paste0(yrs,mon)[-c(336)] # remove 12/2017 for now
 	 	monthly_time_series = as.Date(paste0(date_list,"01"),"%Y%m%d")
 	 	write.csv(monthly_time_series,file="Climate/PRISM/monthly_time_series.csv",row.names=FALSE)
 	
@@ -161,7 +175,9 @@ setwd('/Volumes/DGE/Data/Shared/Labs/Field/Private/Marvin/TNC/Statewide/californ
 		#spei_1mo = calc(spei_d, function(x) spei(x,1,na.rm=TRUE)$fitted)
 		#spei_12mo = calc(spei_d, function(x) spei(x,12,na.rm=TRUE)$fitted)
 		spei_36mo = calc(spei_d, function(x) spei(x,36,na.rm=TRUE)$fitted)
+		spei_60mo = calc(spei_d, function(x) spei(x,60,na.rm=TRUE)$fitted)
 	
 		writeRaster(spei_36mo, filename = "Climate/PRISM/prism_4km_1990-2017_monthly_spei_36mo.tif",
 				format="GTiff",datatype='FLT4S',	options=c("COMPRESS=LZW"))
-	
+		writeRaster(spei_60mo, filename = "Climate/PRISM/prism_4km_1990-2017_monthly_spei_60mo.tif",
+				format="GTiff",datatype='FLT4S',	options=c("COMPRESS=LZW"))
